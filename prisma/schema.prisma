@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String    @id @default(uuid())
+  email            String    @unique
+  name             String?
+  password         String
+  role             Role      @default(AGENT)
+  entityId         String?
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  assignedCourriers Courrier[] @relation("AssignedTo")
+  histories        History[]
+}
+
+model Courrier {
+  id           String       @id @default(uuid())
+  reference    String       @unique
+  subject      String
+  body         String?
+  sender       String?
+  recipient    String?
+  type         String?      // id ref to CourierType label or id
+  category     String?      // id ref to Category
+  priority     String?      @default("normal")
+  status       Status       @default(RECEIVED)
+  fromEntity   String?
+  toEntity     String?
+  createdBy    String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  assignedTo   String?
+  assignedUser User?        @relation("AssignedTo", fields: [assignedTo], references: [id])
+  attachments  Attachment[]
+  history      History[]
+}
+
+model Attachment {
+  id         String   @id @default(uuid())
+  filename   String
+  url        String
+  courrierId String
+  courrier   Courrier @relation(fields: [courrierId], references: [id], onDelete: Cascade)
+  uploadedAt DateTime @default(now())
+}
+
+model History {
+  id         String   @id @default(uuid())
+  courrierId String
+  courrier   Courrier @relation(fields: [courrierId], references: [id], onDelete: Cascade)
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id])
+  action     String
+  fromStatus Status?
+  toStatus   Status?
+  note       String?
+  createdAt  DateTime @default(now())
+}
+
+// Referentials (for UI compatibility)
+model Entity {
+  id          String   @id @default(uuid())
+  label       String
+  description String?
+  code        String?
+  email       String?
+  phone       String?
+  chefId      String?
+  createdAt   DateTime @default(now())
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  label       String
+  description String?
+}
+
+model CourierType {
+  id          String   @id @default(uuid())
+  label       String
+  description String?
+}
+
+model RefState {
+  id          String   @id @default(uuid())
+  label       String
+  description String?
+  color       String?
+}
+
+enum Role {
+  SUPER_ADMIN
+  RESPONSABLE
+  AGENT
+  ARCHIVISTE
+}
+
+enum Status {
+  RECEIVED
+  IN_PROGRESS
+  ASSIGNED
+  DONE
+  ARCHIVED
+}
